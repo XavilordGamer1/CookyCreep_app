@@ -14,6 +14,7 @@ class ScanScreen extends StatefulWidget {
 }
 
 class _ScanScreenState extends State<ScanScreen> {
+  // Simplemente eliminamos el parámetro "resolution" que causaba el error.
   final MobileScannerController controller = MobileScannerController(
     formats: [BarcodeFormat.code128, BarcodeFormat.ean13],
   );
@@ -27,17 +28,14 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  // --- MEJORA: Se añade la validación del código ---
   void _onDetect(BarcodeCapture capture) {
     if (isProcessing) return;
 
     final String? codigo = capture.barcodes.first.rawValue;
     if (codigo == null) return;
 
-    // Se obtiene la lista de códigos válidos que hemos generado en la app
     final validCodes = _getValidProductCodes(context);
 
-    // Se comprueba si el código escaneado está en nuestra lista
     if (validCodes.contains(codigo)) {
       setState(() {
         isProcessing = true;
@@ -45,22 +43,17 @@ class _ScanScreenState extends State<ScanScreen> {
       controller.stop();
       _mostrarDialogoVenta(codigo);
     } else {
-      // Si el código no es válido, se muestra un error rápido y se sigue escaneando
-      // Esto evita detenerse por códigos de otros productos.
       _showInvalidCodeError();
     }
   }
 
-  // Función auxiliar para generar la lista de códigos de producto válidos
   List<String> _getValidProductCodes(BuildContext context) {
     final cookieProvider = Provider.of<CookieProvider>(context, listen: false);
     return cookieProvider.cookies.map((cookie) {
-      // Genera el código de producto exactamente como en la pantalla de "Generar Códigos"
       return "PRODUCTO-${cookie.nombre.toUpperCase().replaceAll(' ', '-')}";
     }).toList();
   }
 
-  // Muestra un mensaje de error sin detener el flujo
   void _showInvalidCodeError() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -165,6 +158,13 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final scanWindow = Rect.fromCenter(
+      center: screenSize.center(Offset.zero),
+      width: screenSize.width * 0.9,
+      height: screenSize.height * 0.25,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Escanear para Vender"),
@@ -182,49 +182,54 @@ class _ScanScreenState extends State<ScanScreen> {
         ],
       ),
       body: Stack(
-        alignment: Alignment.center,
+        fit: StackFit.expand,
         children: [
           MobileScanner(
             controller: controller,
             onDetect: _onDetect,
+            scanWindow: scanWindow,
           ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  height: 2,
-                  width: MediaQuery.of(context).size.width * 0.7,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.red.withOpacity(0.7),
-                        blurRadius: 8.0,
-                        spreadRadius: 2.0,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          CustomPaint(
+            painter: ScannerOverlay(scanWindow: scanWindow),
           ),
-          Positioned(
-            bottom: 30,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(5),
-              ),
-              child: const Text(
-                "Coloca el código bajo la línea",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          )
         ],
       ),
     );
+  }
+}
+
+class ScannerOverlay extends CustomPainter {
+  const ScannerOverlay({required this.scanWindow});
+
+  final Rect scanWindow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final backgroundPath = Path.combine(
+      PathOperation.difference,
+      Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height)),
+      Path()
+        ..addRRect(
+            RRect.fromRectAndRadius(scanWindow, const Radius.circular(8)))
+        ..close(),
+    );
+    final backgroundPaint = Paint()
+      ..color = Colors.black.withOpacity(0.5)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(backgroundPath, backgroundPaint);
+
+    final borderPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(scanWindow, const Radius.circular(8)),
+      borderPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }
