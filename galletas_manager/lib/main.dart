@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Importa tus providers y la pantalla principal
 import 'providers/cookie_provider.dart';
 import 'providers/ventas_provider.dart';
 import 'screens/home_screen.dart';
@@ -15,8 +14,6 @@ class VentasGalletasApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos MultiProvider para que toda la app tenga acceso
-    // al estado de las galletas y las ventas.
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => CookieProvider()),
@@ -28,14 +25,15 @@ class VentasGalletasApp extends StatelessWidget {
           primarySwatch: Colors.brown,
           visualDensity: VisualDensity.adaptivePlatformDensity,
           scaffoldBackgroundColor: Colors.grey[100],
-          // --- CORRECCIÓN APLICADA AQUÍ ---
-          // Se cambió CardTheme por CardThemeData para que coincida con el tipo esperado.
+
+          // SOLUCIÓN FINAL: Para Flutter 3.22+ se debe usar CardThemeData.
           cardTheme: CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
           ),
+
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.brown[700],
