@@ -10,8 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  # Dependencias que hemos usado
+
+  # Dependencias finales y correctas
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   barcode_widget: ^2.0.4
@@ -20,8 +20,9 @@ dependencies:
   csv: ^6.0.0
   share_plus: ^9.0.0
   mobile_scanner: ^5.1.1
-  image_gallery_saver: ^2.0.3
-
+  
+  # EL PAQUETE CORRECTO
+  gallery_saver: ^2.3.2
 
 dev_dependencies:
   flutter_test:

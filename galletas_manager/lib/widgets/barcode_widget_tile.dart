@@ -1,12 +1,16 @@
 // lib/widgets/barcode_widget_tile.dart
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:path_provider/path_provider.dart';
+
+// --- Se cambia el import al nuevo paquete ---
+import 'package:gallery_saver/gallery_saver.dart';
 
 class BarcodeWidgetTile extends StatelessWidget {
   final String data;
@@ -14,7 +18,7 @@ class BarcodeWidgetTile extends StatelessWidget {
 
   const BarcodeWidgetTile({super.key, required this.data, required this.label});
 
-  // --- FUNCIÓN CORREGIDA PARA SER COMPATIBLE CON TU VERSIÓN DEL PAQUETE ---
+  // --- Se actualiza toda la función para usar gallery_saver ---
   Future<void> _saveBarcodeToGallery(
       GlobalKey key, String filename, BuildContext context) async {
     final status = await Permission.photos.request();
@@ -29,22 +33,30 @@ class BarcodeWidgetTile extends StatelessWidget {
         final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
         final Uint8List pngBytes = byteData!.buffer.asUint8List();
 
-        // --- CORRECCIÓN: Se elimina el parámetro 'albumName' que no es compatible ---
-        final result = await ImageGallerySaver.saveImage(
-          pngBytes,
-          quality: 90,
-          name: filename,
-        );
+        // --- LÓGICA DE GUARDADO ACTUALIZADA ---
+        final Directory tempDir = await getTemporaryDirectory();
+        final String filePath = '${tempDir.path}/$filename.png';
+        final File file = await File(filePath).writeAsBytes(pngBytes);
 
-        if (context.mounted && result['isSuccess']) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Guardado en la galería.")),
-          );
-        } else {
-          if (context.mounted) {
+        final bool? success = await GallerySaver.saveImage(file.path,
+            albumName: 'CodigosDeGalletas');
+
+        await file.delete();
+
+        if (context.mounted) {
+          if (success ?? false) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                  content: Text("Error al guardar: ${result['errorMessage']}")),
+              const SnackBar(
+                content: Text("¡Guardado en la galería!"),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Error: No se pudo guardar en la galería."),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         }
